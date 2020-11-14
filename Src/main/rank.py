@@ -3,7 +3,7 @@
 # Check for sentences having query appearing twice
 # Nan issue - prince charles
 # top three - does not print based on order
-# warmest is not lemmatised to warm 
+
 # generted tf_idf table again
 
 
@@ -25,7 +25,7 @@ from nltk.stem import WordNetLemmatizer
 
 from query import query, free_text
 print("Loading backend...")
-with open('tfidf.pickle','rb') as f:
+with open('tf_idf_final.pkl','rb') as f:
 	extracted=pickle.load(f)
 
 with open('mapper.pkl', 'rb') as f:
@@ -39,8 +39,8 @@ def retrieve_docs(tup, doc_name_mapping):
 	
 	
 	doc_name = doc_name_mapping[tup[0]]
-	# df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
-	df = pd.read_csv("/Users/rohitpentapati/Documents/Niha/sem7/AIR/SearchEngine/data/Corpus/" + doc_name, header=None)
+	df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
+	# df = pd.read_csv("/Users/rohitpentapati/Documents/Niha/sem7/AIR/SearchEngine/data/Corpus/" + doc_name, header=None)
 	content=df.iloc[[tup[1]]].values.tolist()[0][1]
 	return (doc_name,content)
 
@@ -52,6 +52,7 @@ def print_results(ranked_docs):
 		print("Text : ",data[1])
 		print("Similarity measure : ",'%.3f'%rank)
 		print("------------------------------------------")
+		
 
 def print_table(t, no_of_docs):
 	print("============================")
@@ -131,7 +132,7 @@ tfidf_weights={}
 for i in docs_rows:
 	docid=i[0]
 	doc_name=doc_name_mapping[docid]
-	rowid=str(i[1])
+	rowid=i[1]
 	for j in extracted[doc_name][rowid]:
 		if j in tokens_q:
 			tfidf_weights[j]=extracted[doc_name][rowid][j]
