@@ -6,6 +6,7 @@
 # dictionary - doc name first each dovc name has a dict where keys are rows and values are dict of words(key) and weights(value)
 #------------------
 
+
 import math
 import pickle
 import csv
@@ -15,7 +16,7 @@ from scipy import spatial
 
 
 from query import query
-
+print("Loading backend...")
 with open('tfidf.pickle','rb') as f:
 	extracted=pickle.load(f)
 
@@ -24,15 +25,25 @@ with open('mapper.pkl', 'rb') as f:
 
 with open('inverted_index_final.pkl', 'rb') as f:
     index = pickle.load(f)
-# def retrieve_docs(docs_rows, doc_name_mapping):
-# 	docs = []
-# 	for tup in docs_rows:
-# 		doc_name = doc_name_mapping[tup[0]]
-# 		df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
-# 		docs.append(df.iloc[[tup[1]]].values.tolist()[0][1])
-		
-# 	return docs
 
+print("Done loading!")
+def retrieve_docs(tup, doc_name_mapping):
+	
+	
+	doc_name = doc_name_mapping[tup[0]]
+	df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
+	content=df.iloc[[tup[1]]].values.tolist()[0][1]
+	return (doc_name,content)
+
+def print_results(ranked_docs):
+	for i in ranked_docs:
+		data=retrieve_docs(i,doc_name_mapping)
+		rank=ranked_docs[i]
+		print("Document : ",data[0],"Row Number : ",i[1])
+		print("Text : ",data[1])
+		print("Similarity measure : ",rank)
+		print("------------------------------------------")
+	
 
 def computeTF_IDF(docs):
 
@@ -73,47 +84,55 @@ def cosine_similarity(query_list, document):
 	return((dot_product(query_list, document))/(magnitude(query_list)*magnitude(document)))
 
 
-# sentence1 = "The tiger (Panthera tigris) is the largest extant cat species and a member of the genus Panthera."
-# sentence2 = "The tiger is among the most recognisable and popular of the world's charismatic megafauna tiger."
-# senetence3 = "Tiger is scattered throughout sub-Saharan Africa, South Asia, and Southeast Asia and are found in different habitats, including savannahs, forests, deserts, and marshes. They are herbivorous, and they stay near water when it is accessible."
-
-# query = "tiger"
 
 
-q='global warming'
+q=input('Enter your Query : ')
+print("Your query is : ",q)
 tokens_q=q.split()
+#lemmetize it 
 tokens_q=[x for x in tokens_q if x in index.keys()]
 
 docs_rows = query(q)
-
-print("--------------Documents retirved from query.py-------------------")
 print(docs_rows)
-#[(docid,rowid)]
+
 query_string=''.join(tokens_q)
 query_tfidf = computeTF_IDF([query_string])
 query_tfidf = query_tfidf.sort_index(axis = 1)
 query_list = query_tfidf.values.tolist()
 
 final_ranks=[]
-tfidf_weights=[]
+tfidf_weights={}
 for i in docs_rows:
 	docid=i[0]
 	doc_name=doc_name_mapping[docid]
 	rowid=str(i[1])
 	for j in extracted[doc_name][rowid]:
 		if j in tokens_q:
-			print("Token found! :",j)
-			tfidf_weights.append(extracted[doc_name][rowid][j])
-	
-	print(tfidf_weights)
-	rank = 1 - spatial.distance.cosine(query_list[0], tfidf_weights)
+			tfidf_weights[j]=extracted[doc_name][rowid][j]
+
+	#sort the dictionary
+	# print(tfidf_weights)
+	tfidf_weights={k:v for k, v in sorted(tfidf_weights.items(), key=lambda item: item[0])}
+
+	# print(tfidf_weights)
+	rank = 1 - spatial.distance.cosine(query_list[0], list(tfidf_weights.values()))
 	# rank = cosine_similarity(query_list[0],tfidf_weights)
-	print(rank)
+	# print(rank)
 	final_ranks.append(rank)
-	tfidf_weights=[]
+	tfidf_weights={}
+
 
 print("Final Ranks : ")
 print(final_ranks)
+ranked_docs={}
+ranked_docs = {docs_rows[i]: final_ranks[i] for i in range(len(final_ranks))} 
+ranked_docs={k:v for k, v in sorted(ranked_docs.items(), key=lambda item: -item[1])}
+
+print_results(ranked_docs)
+
+
+
+
 
 
 # # docs = retrieve_docs(docs_rows, doc_name_mapping)
