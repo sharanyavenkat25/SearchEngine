@@ -53,6 +53,25 @@ def query(q):
 		return final_docs
 
 
-
-	
+def free_text(q):
+	lemmatized_tokens_row = []
+	tokens = []
+	lemmatizer = WordNetLemmatizer()
+	text_tokens = word_tokenize(q)
+	tokens_without_sw_row=[word for word in text_tokens if not word in stopwords.words()]
+	lemmatized_tokens_row=[lemmatizer.lemmatize(w) for w in tokens_without_sw_row]
+	tokens.append(lemmatized_tokens_row)
+	#print(docs["resurgence"])
+	final = []
+	res = []
+	for word in tokens[0]:
+		# res = []
+		if word in docs:
+			#print(docs[word])
+			for docu in docs[word]:
+					rows = list(docs[word][docu].keys())
+					for r in rows:
+						rand = (docu, r)
+						res.append(rand)
+	return res
 # print(query("climate change"))
