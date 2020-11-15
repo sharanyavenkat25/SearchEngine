@@ -35,7 +35,7 @@ def query(q):
 	#print(final[1])
 	leng = len(final)
 	if(leng == 1 or leng == 0):
-		return final
+		return final[0]
 	elif(leng >= 1):
 		final_docs = []
 		for i in final[0]:
@@ -74,3 +74,4 @@ def free_text(q):
 						rand = (docu, r)
 						res.append(rand)
 	return res
+
