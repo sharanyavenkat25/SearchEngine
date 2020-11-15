@@ -48,7 +48,7 @@ def print_results(ranked_docs):
 		rank=ranked_docs[i]
 		print("Document : ",data[0],"Row Number : ",i[1])
 		print("Text : ",data[1])
-		print("Similarity measure : ",'%.3f'%rank)
+		print("Cosine Similarity : ",'%.3f'%rank)
 		print("------------------------------------------")
 		
 
