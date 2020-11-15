@@ -1,18 +1,12 @@
 # How will cosine similarity work for queries like PES * ??
-# Set the float precision - too many decimals
+
 # Check for sentences having query appearing twice
-# Nan issue - prince charles
-# top three - does not print based on order
-
-# generted tf_idf table again
-
-
-#------------------
-# dictionary - doc name first each dovc name has a dict where keys are rows and values are dict of words(key) and weights(value)
-#------------------
-
+# one word queries is an issue
+# print top 30  - take input from user
 
 import math
+import os
+import sys
 import time
 import pickle
 import csv
@@ -21,11 +15,16 @@ import nltk
 from sklearn.feature_extraction.text import TfidfVectorizer
 from scipy import spatial
 from nltk.stem import WordNetLemmatizer 
-
-
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy import sparse
+import numpy as np
+from numpy.linalg import norm
+from numpy import dot
 from query import query, free_text
-print("Loading backend...")
-with open('tf_idf_final.pkl','rb') as f:
+
+print("Loading backend files...")
+
+with open('tfidf_vectorspace.pkl','rb') as f:
 	extracted=pickle.load(f)
 
 with open('mapper.pkl', 'rb') as f:
@@ -36,7 +35,6 @@ with open('inverted_index_final.pkl', 'rb') as f:
 
 print("Done loading!")
 def retrieve_docs(tup, doc_name_mapping):
-	
 	
 	doc_name = doc_name_mapping[tup[0]]
 	df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
@@ -62,143 +60,78 @@ def print_table(t, no_of_docs):
 	print("============================")
 	
 
-def computeTF_IDF(docs):
+def computeTF_IDF_for_query(query,words):
 
-	vectorizer = TfidfVectorizer()
-	vectors = vectorizer.fit_transform(docs)
-	feature_names = vectorizer.get_feature_names()
-	dense = vectors.todense()
-	denselist = dense.tolist()
-	df = pd.DataFrame(denselist, columns=feature_names)
-	return df
-
-def extract_query_columms(df, q):
-	data = {}
-	for word in q:
-		df1 = df[word]
-		df1 = df1.tolist()
-		data[word] = df1
-	# print(data)
-	return(pd.DataFrame(data))
-
-def dot_product(query_list, document):
-	val = 0
-	l = len(query_list)
-	for i in range(l):
-		val+= query_list[i]*document[i]
-	return val
-
-def magnitude(q):
-	val = 0
-	l = len(q)
-	for i in range(l):
-		val+=q[i]*q[i]
-	val = math.sqrt(val)
-	return val
-
-def cosine_similarity(query_list, document):
-	print(len(query_list),len(document))
-	return((dot_product(query_list, document))/(magnitude(query_list)*magnitude(document)))
-
-
-
-
+	vectorizer = TfidfVectorizer(vocabulary=words,use_idf=True)
+	corpus = [query]
+	query_vec = vectorizer.fit_transform(corpus)
+	return query_vec
+	
 q=input('Enter your Query : ')
 print("Your query is : ",q)
 
+itr=int(input('Enter how many top searches you would like to see (Enter 0 if you want to retrive all Docs): '))
+
+
 start = time.time()
-
+if(itr>0):	
+	print("\nSearching Corpus....Retrieving top ",itr," documents \n")
+elif(itr==0):
+	print("\nSearching Corpus....Retrieving all documents \n")
+else:
+	print("Invalid value of number of docs required")
+	exit()
+#query pre processing
 tokens_q=q.split()
-
 lemmatizer = WordNetLemmatizer()
 tokens_q_lemmatized=[lemmatizer.lemmatize(w) for w in tokens_q]
-print(tokens_q_lemmatized)
-tokens_q=[x for x in tokens_q_lemmatized if x in index.keys()]
 
+query_string=' '.join(tokens_q_lemmatized)
+query_vec=computeTF_IDF_for_query(query_string,index.keys())
+
+#getting docs
 docs_rows = query(q)
-print(docs_rows)
 
 if docs_rows == []:
 	docs_rows = free_text(q)
-print(docs_rows)
+	
 
-query_string=''.join(tokens_q)
-query_tfidf = computeTF_IDF([query_string])
-query_tfidf = query_tfidf.sort_index(axis = 1)
-query_list = query_tfidf.values.tolist()
-
+#generating ranks
 final_ranks=[]
-tfidf_weights={}
+sim={}
 for i in docs_rows:
 	docid=i[0]
 	doc_name=doc_name_mapping[docid]
 	rowid=i[1]
-	for j in extracted[doc_name][rowid]:
-		if j in tokens_q:
-			tfidf_weights[j]=extracted[doc_name][rowid][j]
-
-	#sort the dictionary
-	# print(tfidf_weights)
-	tfidf_weights={k:v for k, v in sorted(tfidf_weights.items(), key=lambda item: item[0])}
-
-	# print(tfidf_weights)
-	rank = 1 - spatial.distance.cosine(query_list[0], list(tfidf_weights.values()))
-	# rank = cosine_similarity(query_list[0],list(tfidf_weights.values()))
-	# print(rank)
-	final_ranks.append(rank)
-	tfidf_weights={}
-
-
-print("Final Ranks : ")
-ranked_docs={}
-ranked_docs = {docs_rows[i]: final_ranks[i] for i in range(len(final_ranks))} 
-ranked_docs={k:v for k, v in sorted(ranked_docs.items(), key=lambda item: -item[1])}
-
-print_results(ranked_docs)
+	doc_vector=extracted[doc_name][rowid]
+	d_vec=doc_vector.toarray()[0]
+	q_vec=query_vec.toarray()[0]
+	similarities=float(dot(d_vec,q_vec) /(norm(d_vec) * norm(q_vec)))
+	final_ranks.append(similarities)
 
 end = time.time()
 
+
+print("\nRetrieved Documents  : \n")
+ranked_docs={}
+ranked_docs = {docs_rows[i]: final_ranks[i] for i in range(len(final_ranks))}
+if(itr>0): 
+	ranked_docs={k:v for k, v in sorted(ranked_docs.items(), key=lambda item: -item[1])[:itr]}
+else:
+	ranked_docs={k:v for k, v in sorted(ranked_docs.items(), key=lambda item: -item[1])}
+
+
+print_results(ranked_docs)
+
+
+
 t = end-start
-# print("Total time taken: ", '%.2f'%t, " seconds")
 print()
-print_table(t, len(docs_rows))
+if(itr>0):
+	print_table(t, itr)
+else:
+	print_table(t, len(docs_rows))
 print()
 
-# # docs = retrieve_docs(docs_rows, doc_name_mapping)
-# # print(docs)
-
-
-
-# # docs_tfidf = computeTF_IDF([sentence1, sentence2, senetence3])
-# docs_tfidf = computeTF_IDF(docs)
-# print(docs_tfidf)
-# # [query] = list of words in the query
-# # query_tfidf = computeTF_IDF(['tiger cat'])
-
-# extracted_tfidf = extract_query_columms(docs_tfidf, ['global','warming'])
-# extracted_tfidf = extracted_tfidf.sort_index(axis = 1)
-
-# print(extracted_tfidf)
-
-# # print(docs_tfidf)
-# # print(docs_tfidf['tiger'])
-
-# # print(query_tfidf)
-
-# # query_list = query_tfidf.values.tolist()
-# # print(query_list)
-# # print("\n")
-
-# ranks = []
-# l = len(docs)
-# for i in range(l):
-# 	doc = extracted_tfidf.iloc[[i]]
-# 	doc = doc.values.tolist()
-# 	print(doc)
-# 	rank = cosine_similarity(query_list[0],doc[0])
-# 	ranks.append(rank)
-# 	# print(ranks)
-
-# print("Final Ranks", ranks)
 
 

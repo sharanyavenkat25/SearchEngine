@@ -74,4 +74,3 @@ def free_text(q):
 						rand = (docu, r)
 						res.append(rand)
 	return res
-# print(query("climate change"))
