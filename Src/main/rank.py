@@ -2,7 +2,7 @@
 
 # Check for sentences having query appearing twice
 # one word queries is an issue
-# print top 30  - take input from user
+# been* check 
 
 import math
 import os
@@ -25,7 +25,7 @@ from permuteindex import wildcard_queries
 
 print("Loading backend files...")
 
-with open('tfidf_vectorspace.pkl','rb') as f:
+with open('tfidf_vectorspace_new.pkl','rb') as f:
 	extracted=pickle.load(f)
 
 with open('mapper.pkl', 'rb') as f:
@@ -126,7 +126,7 @@ if(len(q.split(' '))==1 and '*' in q):
 else :
 
 	#query pre processing
-	start = time.time()
+	
 
 	tokens_q=q.split()
 	lemmatizer = WordNetLemmatizer()
@@ -136,9 +136,11 @@ else :
 	query_vec=computeTF_IDF_for_query(query_string,index.keys())
 
 	#getting docs
+	start = time.time()
 	docs_rows = query(q)
 
 	if docs_rows == []:
+		# print("in free text")
 		docs_rows = free_text(q)
 
 
