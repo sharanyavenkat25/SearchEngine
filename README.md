@@ -13,8 +13,15 @@ Implemented a vector space model for providing ranked results for the document s
 Original dataset can be found in SearchEngine/data/TelevisionNews
 
 Refined Snippets from original dataset can be found in SearchEngine/data/Corpus
+
+To run Tfidf model - 
 ```
 cd SearchEngine/Src/main
-python3 rank.py
+python3 rank_tfidf.py
+```
+To run BERT model - 
+```
+cd SearchEngine/Src/main
+python3 rank_bert.py
 ```
 
