@@ -10,9 +10,16 @@ Implemented a vector space model for providing ranked results for the document s
 - Ranking is done using Cosine similarity of embeddings from queries and matching text from docs
 
 ## Running files
+All dataset info can be found in SearchEngine/data
+```
 Original dataset can be found in SearchEngine/data/TelevisionNews
 
 Refined Snippets from original dataset can be found in SearchEngine/data/Corpus
+```
+
+All source code can be found in SearchEngine/Src
+
+SearchEngine/Src contains multiple pickle files which store our inverted index, permuterm index and tdidf weight matrix as well as embeddings for each document.
 
 To run Tfidf model - 
 ```
