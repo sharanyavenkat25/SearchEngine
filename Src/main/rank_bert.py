@@ -1,9 +1,8 @@
-# How will cosine similarity work for queries like PES * ??
-
 # Check for sentences having query appearing twice
-# one word queries is an issue
 # been* check 
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning) 
 import math
 import os
 import sys
@@ -22,11 +21,21 @@ from numpy.linalg import norm
 from numpy import dot
 from query import query, free_text
 from permuteindex import wildcard_queries
+from sentence_transformers import SentenceTransformer, util
+import torch
+embedder = SentenceTransformer('distilbert-base-nli-stsb-mean-tokens')
+
+
 
 print("Loading backend files...")
 
-with open('tfidf_vectorspace_new.pkl','rb') as f:
+#BERT
+with open('tfidf_vectorspace_bert.pkl','rb') as f:
 	extracted=pickle.load(f)
+
+#TFIDF
+# with open('tfidf_vectorspace_new.pkl','rb') as f:
+# 	extracted=pickle.load(f)
 
 with open('mapper.pkl', 'rb') as f:
 	doc_name_mapping = pickle.load(f)
@@ -38,8 +47,8 @@ print("Done loading!")
 def retrieve_docs(tup, doc_name_mapping):
 	
 	doc_name = doc_name_mapping[tup[0]]
-	# df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
-	df = pd.read_csv("/Users/rohitpentapati/Documents/Niha/sem7/AIR/SearchEngine/data/Corpus/" + doc_name, header=None)
+	df = pd.read_csv("/mnt/d/SearchEngine/data/Corpus/" + doc_name, header=None)
+	# df = pd.read_csv("/Users/rohitpentapati/Documents/Niha/sem7/AIR/SearchEngine/data/Corpus/" + doc_name, header=None)
 	content=df.iloc[[tup[1]]].values.tolist()[0][1]
 	return (doc_name,content)
 
@@ -133,7 +142,13 @@ else :
 	tokens_q_lemmatized=[lemmatizer.lemmatize(w) for w in tokens_q]
 
 	query_string=' '.join(tokens_q_lemmatized)
-	query_vec=computeTF_IDF_for_query(query_string,index.keys())
+	#BERT
+	query_vec = embedder.encode(query_string, convert_to_tensor=True)
+	
+
+	#TF-IDF
+	# query_vec=computeTF_IDF_for_query(query_string,index.keys())
+	
 
 	#getting docs
 	start = time.time()
@@ -152,10 +167,19 @@ else :
 		doc_name=doc_name_mapping[docid]
 		rowid=i[1]
 		doc_vector=extracted[doc_name][rowid]
-		d_vec=doc_vector.toarray()[0]
-		q_vec=query_vec.toarray()[0]
-		similarities=float(dot(d_vec,q_vec) /(norm(d_vec) * norm(q_vec)))
-		final_ranks.append(similarities)
+		#BERT
+		d_vec=doc_vector
+		q_vec=query_vec
+		cos_scores = util.pytorch_cos_sim(q_vec, d_vec)[0]
+		cos_scores = cos_scores.cpu()
+		final_ranks.append(cos_scores)
+
+		#TFIDF
+		# d_vec=doc_vector.toarray()[0]
+		# q_vec=query_vec.toarray()[0]
+		# similarities=float(dot(d_vec,q_vec) /(norm(d_vec) * norm(q_vec)))
+		
+		# final_ranks.append(similarities)
 
 	end = time.time()
 
